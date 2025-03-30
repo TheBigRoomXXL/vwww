@@ -23,3 +23,11 @@ Usage of vwww:
   -seed int
         an int (default 42)
 ```
+
+
+Todo
+```
+☐ response size parameter
+☐ use of random distribution rather than fix parameters for delay and size
+☐ mock library API
+```
