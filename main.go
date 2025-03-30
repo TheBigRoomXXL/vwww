@@ -7,7 +7,7 @@ import (
 
 func main() {
 	numberOfPages := flag.Int("pages", 10_000, "number of pages")
-	delay := flag.Int("delay", 1000, "delay in ms")
+	delay := flag.Int("delay", 100, "delay in ms")
 	seed := flag.Int("seed", 42, "an int")
 
 	flag.Parse()
