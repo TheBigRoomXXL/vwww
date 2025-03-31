@@ -21,8 +21,6 @@ var HTMLTemplate = template.Must(template.New("VirtualPage").Parse(`
     {{range .}}
 		<div><a href="/{{.}}" > /{{.}} </a></div>
 	{{end}}
-  </body>
-</html>
 `))
 
 type VirtualPage struct {
@@ -31,14 +29,16 @@ type VirtualPage struct {
 
 type VirtualWorldWideWeb struct {
 	numberOfPages int
+	sizeKB        int
 	seed          int64
 	delay         time.Duration
 	rand          *rand.Rand
 }
 
-func NewVWWW(numberOfPages int, seed int64, delayMS int) *VirtualWorldWideWeb {
+func NewVWWW(numberOfPages int, sizeKB int, seed int64, delayMS int) *VirtualWorldWideWeb {
 	return &VirtualWorldWideWeb{
 		numberOfPages: numberOfPages,
+		sizeKB:        sizeKB,
 		seed:          seed,
 		delay:         time.Duration(delayMS) * time.Millisecond,
 		rand:          rand.New(rand.NewSource(seed)),
@@ -51,9 +51,10 @@ func (vwww *VirtualWorldWideWeb) Serve(port int) error {
 
 	log.Printf("─────────────────────────────────────────────\n")
 	log.Printf(" Serving requests on http://127.0.0.1:%d\n", port)
-	log.Printf(" ↳ numberOfPages=%d\n", vwww.numberOfPages)
-	log.Printf(" ↳ seed=%d\n", vwww.seed)
-	log.Printf(" ↳ delay=%s\n", vwww.delay)
+	log.Printf("   ↳ numberOfPages=%d\n", vwww.numberOfPages)
+	log.Printf("   ↳ size=%dKB\n", vwww.sizeKB)
+	log.Printf("   ↳ seed=%d\n", vwww.seed)
+	log.Printf("   ↳ delay=%s\n", vwww.delay)
 	log.Printf("─────────────────────────────────────────────\n")
 	return http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
@@ -71,9 +72,11 @@ func (vwww *VirtualWorldWideWeb) renderIndex(w http.ResponseWriter, req *http.Re
 }
 
 func (vwww *VirtualWorldWideWeb) renderPage(w http.ResponseWriter, req *http.Request) {
+	// Simulate a delay
 	time.Sleep(vwww.delay)
-	idStr := req.PathValue("id")
 
+	// Return 404 if the page does not exist
+	idStr := req.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil || id < 0 || id >= int64(vwww.numberOfPages) {
 		w.WriteHeader(404)
@@ -82,8 +85,8 @@ func (vwww *VirtualWorldWideWeb) renderPage(w http.ResponseWriter, req *http.Req
 		return
 	}
 
+	// Generate the page
 	vwww.rand.Seed(vwww.seed + id)
-
 	var alpha float64
 	var max float64
 	if vwww.numberOfPages <= 100_000 {
@@ -101,6 +104,14 @@ func (vwww *VirtualWorldWideWeb) renderPage(w http.ResponseWriter, req *http.Req
 	}
 	targets[nbTargets] = int(id - 1)
 	HTMLTemplate.Execute(w, targets)
+
+	// Add the base size
+	for i := 0; i < vwww.sizeKB*1024; i++ {
+		w.Write([]byte(" "))
+	}
+	w.Write([]byte(`</body></html>`))
+
+	// Set headers
 	w.Header().Add("Content-Type", "text/html")
 	w.Header().Add("X-Seed", strconv.Itoa(int(vwww.seed)))
 	log.Printf("200 OK - %s\n", req.URL)
